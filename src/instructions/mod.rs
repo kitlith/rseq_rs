@@ -1,13 +1,19 @@
 //use num_traits::{FromPrimitive, ToPrimitive};
 use num_derive::{FromPrimitive, ToPrimitive};
 
+mod parser;
+
+pub use parser::parse_instructions as parse;
+
+type VarInt = u64;
+
 // mostly based on rseq2midi.cpp and Atlas' BRSEQ documentation
 
 #[derive(Debug)]
 pub enum Instruction {
-    Note { note: u8, velocity: u8, len: u64 }, // 0x00 - 0x7F (u8, var)
-    Rest(u64), // 0x80 (var)
-    Instrument(u64), // 0x81 (var?)
+    Note { note: u8, velocity: u8, len: VarInt }, // 0x00 - 0x7F (u8, var)
+    Rest(VarInt), // 0x80 (var)
+    Instrument(VarInt), // 0x81 (var?)
     // 0x82 ..= 0x87 unused
     // for the following... maybe keep labels instead of addresses?
     Fork { track: u8, address: u32}, // 0x88 (u8, u24)
@@ -17,7 +23,7 @@ pub enum Instruction {
     // 0xA0 ..= 0xA5 command prefixes, leaving these unrepresented for now.
     // 0xA6 ..= 0xAF unused
     // 0xB3 ..= 0xBF unused
-    LoopStart, // 0xD4 this may actually take a byte...
+    LoopStart(u8), // 0xD4 this may actually take a byte...
     PrintVar(u8), // 0xD6 (u8)
     // 0xE2 unused
     // 0xE4 ..= 0xEF unused
@@ -27,11 +33,11 @@ pub enum Instruction {
     Return, // 0xFD
     EndOfTrack, // 0xFF
 
-    SetU8Param { param: U8Parameters, value: u8}, // 0xB0, 0xC0 ..= 0xD3, 0xD5, 0xD7 ..= 0xDF ?
-    SetU16Param { param: U16Parameters, value: u16}, // 0xE0, 0xE1, 0xE3
+    SetU8Param { param: U8Parameters, value: u8}, // 0xB0 | 0xC0 ..= 0xD3 | 0xD5 | 0xD7 ..= 0xDF ?
+    SetU16Param { param: U16Parameters, value: u16}, // 0xE0 | 0xE1 | 0xE3
 }
 
-#[derive(Debug, FromPrimitive, ToPrimitive)]
+#[derive(Debug, FromPrimitive, ToPrimitive, Copy, Clone)]
 pub enum U8Parameters {
     Timebase = 0xB0,
     EnvHold = 0xB1, // (-1..=127)
@@ -68,7 +74,7 @@ pub enum U8Parameters {
     Damper = 0xDF, // (bool?)
 }
 
-#[derive(Debug, FromPrimitive, ToPrimitive)]
+#[derive(Debug, FromPrimitive, ToPrimitive, Copy, Clone)]
 pub enum U16Parameters {
     ModDelay = 0xE0,
     Tempo = 0xE1,
@@ -77,7 +83,7 @@ pub enum U16Parameters {
     TrackUsage = 0xFE,
 }
 
-#[derive(Debug, FromPrimitive, ToPrimitive)]
+#[derive(Debug, FromPrimitive, ToPrimitive, Copy, Clone)]
 pub enum UserOp {
     Set = 0x80,
     Add = 0x81,
@@ -98,4 +104,10 @@ pub enum UserOp {
     CmpLt = 0x94,
     CmpNe = 0x96,
     User = 0xE0, // special, no u8
+}
+
+#[derive(Debug)]
+pub enum OptionalInst {
+    Instruction(Instruction),
+    Byte(u8)
 }
