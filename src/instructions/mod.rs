@@ -4,6 +4,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 mod parser;
 
 pub use parser::parse_instructions as parse;
+use std::borrow::Cow;
 
 type VarInt = u64;
 
@@ -109,5 +110,6 @@ pub enum UserOp {
 #[derive(Debug)]
 pub enum OptionalInst {
     Instruction(Instruction),
-    Byte(u8)
+    Byte(u8),
+    Label(String)
 }

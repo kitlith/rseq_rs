@@ -29,10 +29,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             for inst in rseq.instructions {
                 writeln!(output, "{:?}", inst)?;
             }
-            // TODO: add labels into the instruction stream
-//            for label in rseq.labels {
-//                println!("{}", label.1);
-//            }
+            for label in rseq.unused_labels {
+                println!("Warning: Label '{}' at 0x{:x} was not emitted.", label.1, label.0);
+            }
         },
         Err(Err::Failure(err)) => {
             for (substr, error) in err.errors {

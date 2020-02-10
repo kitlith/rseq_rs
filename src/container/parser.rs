@@ -10,9 +10,11 @@ use nom::{
     multi::{count, length_data}
 };
 
-use super::{Label, RSEQ};
+use super::RSEQ;
 use crate::parse::*;
 use crate::instructions;
+use std::collections::HashMap;
+use std::iter::FromIterator;
 
 fn bom<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Endianness, E> {
     context("Bad BOM Marker", alt((
@@ -21,15 +23,15 @@ fn bom<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Endian
     )))(input)
 }
 
-fn parse_label<'a, E: ParseError<&'a [u8]>>(endian: Endianness) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Label<'a>, E> {
+fn parse_label<'a, E: ParseError<&'a [u8]>>(endian: Endianness) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], (u32, String), E> {
     move |input| {
         let (input, addr) = u32!(input, endian)?;
         let (input, bytes) = length_data(pu32(endian))(input)?;
-        Ok((input, Label(addr, String::from_utf8_lossy(bytes))))
+        Ok((input, (addr, String::from_utf8_lossy(bytes).into())))
     }
 }
 
-fn parse_labl_section<'a, E: ParseError<&'a [u8]>>(input: &'a [u8], endian: Endianness) -> IResult<&'a [u8], Vec<Label<'a>>, E> {
+fn parse_labl_section<'a, E: ParseError<&'a [u8]>>(input: &'a [u8], endian: Endianness) -> IResult<&'a [u8], HashMap<u32, String>, E> {
     let (input, _) = tag("LABL")(input)?;
     let (input, len) = u32!(input, endian)?;
     let (_rest, relative) = context("Bad section length?", take(len - 0x8))(input)?;
@@ -39,7 +41,10 @@ fn parse_labl_section<'a, E: ParseError<&'a [u8]>>(input: &'a [u8], endian: Endi
 
     let res = {
         let label_location = map(pu32(endian), |offset| &relative[offset as usize..]);
-        count(map_parser(label_location, parse_label(endian)), cnt)(input)
+        map(
+            count(map_parser(label_location, parse_label(endian)), cnt),
+            HashMap::from_iter
+        )(input)
     };
 
     res
@@ -61,10 +66,10 @@ pub fn parse<'a, E: ParseError<&'a [u8]>>(orig_input: &'a [u8]) -> IResult<&'a [
 
     let data = &orig_input[data_section.0 as usize .. (data_section.0 + data_section.1) as usize];
     let labl = &orig_input[labl_section.0 as usize .. (labl_section.0 + labl_section.1) as usize];
-    let (_, labels) = parse_labl_section(labl, endian)?;
-    let (_, instructions) = instructions::parse(data, endian)?;
+    let (_, mut labels) = parse_labl_section(labl, endian)?;
+    let (_, instructions) = instructions::parse(data, endian, &mut labels)?;
 
-    Ok((&[][..], RSEQ { data, instructions, labels }))
+    Ok((&[][..], RSEQ { data, instructions, unused_labels: labels }))
 }
 
 #[cfg(test)]
