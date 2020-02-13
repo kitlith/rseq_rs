@@ -113,14 +113,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                 OptionalInst::Instruction(inst) => match inst {
                     Instruction::Note { note, velocity: vel, len} => {
                         track.push_midi_event(MidiMessage::NoteOn { key: note.into(), vel: vel.into() });
+                        // println!("new note_pos: {}", track.tick_pos + len);
                         track.pending_notes.push((note, track.tick_pos + len));
                     },
                     Instruction::Rest(len) => {
                         // process notes that should be ending during this rest
+                        // NOTE: sorting in reverse order so that pop can efficiently remove items.
                         track.pending_notes.sort_unstable_by(|(_, pos_a), (_, pos_b)| pos_b.cmp(pos_a));
                         let after_rest = track.tick_pos + len;
 
-                        while track.pending_notes.get(0).map(|(_, pos)| *pos <= after_rest).unwrap_or(false) {
+                        while track.pending_notes.last().map(|(_, pos)| *pos <= after_rest).unwrap_or(false) {
                             let (key, pos) = track.pending_notes.pop().unwrap();
 
                             // println!("note_pos: {}, tick_pos: {}", pos, track.tick_pos);
