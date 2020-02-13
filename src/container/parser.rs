@@ -1,7 +1,7 @@
 use nom::{
     IResult,
     number::Endianness,
-    u16, u32,
+    u32,
     bytes::complete::{tag, take},
     error::{ParseError, context},
     combinator::{value, verify, map, map_parser},
@@ -15,13 +15,6 @@ use crate::parse::*;
 use crate::instructions;
 use std::collections::HashMap;
 use std::iter::FromIterator;
-
-fn bom<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Endianness, E> {
-    context("Bad BOM Marker", alt((
-        value(Endianness::Big, tag(&[0xFE, 0xFF])),
-        value(Endianness::Little, tag(&[0xFF, 0xFE]))
-    )))(input)
-}
 
 fn parse_label<'a, E: ParseError<&'a [u8]>>(endian: Endianness) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], (u32, String), E> {
     move |input| {
@@ -50,6 +43,17 @@ fn parse_labl_section<'a, E: ParseError<&'a [u8]>>(input: &'a [u8], endian: Endi
     res
 }
 
+fn parse_data_section<'a, E: ParseError<&'a [u8]>>(input: &'a [u8], endian: Endianness, labels: &HashMap<u32, String>) -> IResult<&'a [u8], Vec<instructions::OptionalInst>, E> {
+    let (input, _) = tag("DATA")(input)?;
+    let (input, len) = u32!(input, endian)?;
+    let (input, hdrlen) = u32!(input, endian)?;
+
+    let (input, _) = take(hdrlen - 0xC)(input)?;
+    let (_rest, input) = take(len - hdrlen)(input)?;
+
+    instructions::parse(input, endian, labels)
+}
+
 pub fn parse<'a, E: ParseError<&'a [u8]>>(orig_input: &'a [u8]) -> IResult<&'a [u8], RSEQ<'a>, E> {
     let section_header = |endian| move |input| pair(pu32(endian), pu32(endian))(input);
 
@@ -66,27 +70,8 @@ pub fn parse<'a, E: ParseError<&'a [u8]>>(orig_input: &'a [u8]) -> IResult<&'a [
 
     let data = &orig_input[data_section.0 as usize .. (data_section.0 + data_section.1) as usize];
     let labl = &orig_input[labl_section.0 as usize .. (labl_section.0 + labl_section.1) as usize];
-    let (_, mut labels) = parse_labl_section(labl, endian)?;
-    let (_, instructions) = instructions::parse(data, endian, &mut labels)?;
+    let (_, labels) = parse_labl_section(labl, endian)?;
+    let (_, instructions) = parse_data_section(data, endian, &labels)?;
 
-    Ok((&[][..], RSEQ { data, instructions, unused_labels: labels }))
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_varint() {
-        assert_eq!(varint(&[0x70, 0x80]), Ok((&[0x80][..], 0x70)));
-        assert_eq!(varint(&[0x8F, 0x80, 0x00, 0x14]), Ok((&[0x14][..], 0xF << 14)));
-        assert!(varint(&[0x8F, 0x80]).is_err());
-    }
-
-    #[test]
-    fn test_bom() {
-        assert_eq!(bom(&[0xFF, 0xFE, 0x00]), Ok((&[0x00][..], Endianness::Little)));
-        assert_eq!(bom(&[0xFE, 0xFF, 0x00]), Ok((&[0x00][..], Endianness::Big)));
-        assert!(bom(&[0xFE, 0xFE, 0x00]).is_err());
-    }
+    Ok((&[][..], RSEQ { data, instructions, labels }))
 }

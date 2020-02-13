@@ -1,1 +1,38 @@
-fn main() {}
+use rseq_rs::{container, instructions::{OptionalInst, Instruction}};
+use structopt::StructOpt;
+use std::path::PathBuf;
+use std::fs::File;
+use std::error::Error;
+use std::io::{Read, Write, Cursor};
+use nom::combinator::cut;
+use nom::number::Endianness;
+use cookie_factory::gen;
+
+#[derive(StructOpt, Debug)]
+#[structopt(name = "rseq-assembler")]
+struct Options {
+    #[structopt(parse(from_os_str))]
+    input: PathBuf,
+    #[structopt(parse(from_os_str))]
+    output: PathBuf
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let options = Options::from_args();
+    let bytes: Result<Vec<u8>, _> = File::open(options.input)?.bytes().collect();
+    let bytes = bytes?;
+
+    let (_, mut rseq) = cut(container::parse::<nom::error::VerboseError<&[u8]>>)(&bytes).unwrap();
+
+    for mut instruction in &mut rseq.instructions {
+        if let OptionalInst::Instruction(Instruction::Note {ref mut note, ..}) = instruction {
+            *note = 0x7F - *note;
+        }
+    }
+
+    let mut new_bytes = vec![0; bytes.len()];
+    gen(container::gen(&rseq, Endianness::Big), Cursor::new(new_bytes.as_mut_slice()))?;
+
+    File::create(options.output)?.write_all(&new_bytes)?;
+    Ok(())
+}

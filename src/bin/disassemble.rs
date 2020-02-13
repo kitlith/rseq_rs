@@ -1,4 +1,4 @@
-use rseq_rs::container;
+use rseq_rs::{container, instructions::OptionalInst};
 use structopt::StructOpt;
 use std::path::PathBuf;
 use std::fs::File;
@@ -25,13 +25,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     match cut(container::parse::<nom::error::VerboseError<&[u8]>>)(&bytes) {
         Ok((_, rseq)) => {
             // println!("{:?}", rseq.labels);
-            let mut output = File::open(options.output)?;
+            let mut output = File::create(options.output)?;
             for inst in rseq.instructions {
-                writeln!(output, "{:?}", inst)?;
+                match inst {
+                    OptionalInst::Label(l) => writeln!(output, "{}:", l),
+                    OptionalInst::Instruction(i) => writeln!(output, "{:?}", i),
+                    OptionalInst::Byte(b) => writeln!(output, ".byte 0x{:x}", b)
+                }?;
             }
-            for label in rseq.unused_labels {
-                println!("Warning: Label '{}' at 0x{:x} was not emitted.", label.1, label.0);
-            }
+            // for label in rseq.unused_labels {
+            //     println!("Warning: Label '{}' at 0x{:x} was not emitted.", label.1, label.0);
+            // }
         },
         Err(Err::Failure(err)) => {
             for (substr, error) in err.errors {
@@ -41,10 +45,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         Err(Err::Incomplete(needed)) => {
             println!("{:?}", needed);
-            // for (substr, error) in err.errors {
-            //     let offset = bytes.offset(substr);
-            //     println!("{:?} at 0x{:x}", error, offset);
-            // }
         }
         // Err(Err::Error(_)) should not be possible since I used cut to convert Error to Failure.
         _ => unreachable!()
