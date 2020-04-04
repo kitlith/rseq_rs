@@ -29,7 +29,7 @@ fn gen_data_section<'a, W: Write + BackToTheBuffer + Skip + Seek>(instructions: 
         let ret = gen_section(*b"DATA", endian, // section name, len
             pair(gu32(0xC, endian), // section header len
                 |ctx| {
-                    let (ctx, lab) = instructions::gen(&instructions, endian)(ctx)?;
+                    let (ctx, lab) = instructions::bin::gen_instructions(&instructions, endian)(ctx)?;
                     *labels.lock().unwrap() = Some(lab);
                     Ok(ctx)
                 }

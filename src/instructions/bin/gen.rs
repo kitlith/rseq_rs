@@ -1,4 +1,4 @@
-use super::{OptionalInst, Instruction, U8Parameters, U16Parameters, UserOp, Destination, VarInt};
+use crate::instructions::{OptionalInst, Instruction, U8Parameters, U16Parameters, UserOp, Destination, VarInt};
 use crate::gen::*;
 
 use std::io::Write;
@@ -116,7 +116,7 @@ fn gen_destination<W: Write + Seek>(dest: Destination, endian: Endianness) -> im
             let pos = ctx.position;
             gen_placeholder(3)(ctx).map(|(ctx, place)| (ctx, Some(LabelInfo::Placeholder { place, name: name.clone() })))
         },
-        Destination::Address(a) => gu24(*a, endian)(ctx).map(|ctx| (ctx, None))
+        //Destination::Address(a) => gu24(*a, endian)(ctx).map(|ctx| (ctx, None))
     }
 }
 

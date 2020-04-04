@@ -1,4 +1,4 @@
-use super::{Instruction, U8Parameters, U16Parameters, VarInt, OptionalInst, UserOp, Destination};
+use crate::instructions::{Instruction, U8Parameters, U16Parameters, VarInt, OptionalInst, UserOp, Destination};
 use crate::parse::*;
 
 use nom::error::{ParseError, context, ErrorKind};
@@ -40,7 +40,7 @@ fn parse_userproc<'a, E: ParseError<&'a [u8]>>(input: &'a [u8], endian: Endianne
 fn parse_destination<'a, E: ParseError<&'a [u8]>>(input: &'a [u8], endian: Endianness, labels: &HashMap<u32, String>) -> IResult<&'a [u8], Destination, E> {
     map(pu24(endian), |addr| match labels.get(&addr) {
         Some(label) => Destination::Label(label.to_string()),
-        None => Destination::Address(addr)
+        None => unimplemented!("Currently, there is no way to handle an destination without a label") //Destination::Address(addr)
     })(input)
 }
 

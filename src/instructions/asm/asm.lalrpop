@@ -1,0 +1,124 @@
+use crate::instructions::{OptionalInst, Instruction, U8Parameters, U16Parameters, UserOp, Destination, VarInt};
+use num_traits::Num;
+
+grammar;
+
+Num<T>: T = {
+    r"0x([0-9a-fA-F]+)" => <_>::from_str_radix(<>, 16).unwrap(),
+    r"0o([0-8]+)" => <_>::from_str_radix(<>, 8).unwrap(),
+    r"0b([01]+)" => <_>::from_str_radix(<>, 2).unwrap(),
+    r"-?[0-9]+" => <_>::from_str_radix(<>, 10).unwrap()
+};
+
+Label: String = r"[a-zA-Z_][a-zA-Z0-9_\-]+" => <>.into();
+
+Var: u8 = "v([0-9]+)" => u8::from_str_radix(<>, 10).unwrap();
+
+pub Inst: OptionalInst = {
+    Op => OptionalInst::Instruction(<>),
+    ".byte" <u8> => OptionalInst::Byte(<>),
+    <Label> ":" => OptionalInst::Label(<>),
+    "?" => OptionalInst::Instruction(Instruction::If)
+}
+
+Op: Instruction = {
+    "note" <note:u8> "," <velocity:u8> "," <len:VarInt> => Instruction::Note { <> },
+    "rest" <Num<VarInt>> => Instruction::Rest(<>),
+    "fork" <track:u8> "," <label:Label> => Instruction::Fork { track, dest: Destination::Label(label) },
+    "jump" <Label> => Instruction::Jump(Destination::Label(<>)),
+    "call" <Label> => Instruction::Call(Destination::Label(<>)),
+    "start_loop" <u8> => Instruction::LoopStart(<>),
+    "print" <Var> => Instruction::PrintVar(<>),
+    "process" <ProcessInner> => <>,
+    "end_loop" => Instruction::LoopEnd,
+    "ret" => Instruction::Return,
+    "end_track" => Instruction::EndOfTrack,
+    "set" <SetInner> => <>
+};
+
+UserOp: UserOp = {
+    "=" => UserOp::Set,
+    "+=" => UserOp::Add,
+    "-=" => UserOp::Sub,
+    "*=" => UserOp::Mul,
+    "/=" => UserOp::Div,
+    "rand" => UserOp::Rand,
+    "&=" => UserOp::And,
+    "|=" => UserOp::Or,
+    "^=" => UserOp::Xor,
+    "~=" => UserOp::Not,
+    "%=" => UserOp::Mod,
+    "==" => UserOp::CmpEq,
+    ">=" => UserOp::CmpGe,
+    ">" => UserOp::CmpGt,
+    "<=" => UserOp::CmpLe,
+    "<" => UserOp::CmpLt,
+    "!=" => UserOp::CmpNe,
+    // ">>=" => UserOp::Shift, // :/
+    "<<=" => UserOp::Shift
+};
+
+ProcessInner: Instruction = {
+    i16 => Instruction::UserProcess { op: UserOp::User, var: 0xFF, imm: <> },
+    <var:Var> <op:UserOp> <imm:i16> => Instruction::UserProcess { <> }
+};
+
+SetInner: Instruction = {
+    <param:U8Param> "=" <value:u8> => Instruction::SetU8Param { <> },
+    <param:U16Param> "=" <value:u16> => Instruction::SetU16Param { <> },
+};
+
+U8Param: U8Parameters = {
+    "Timebase" => U8Parameters::Timebase,
+    "EnvHold" => U8Parameters::EnvHold,
+    "Monophonic" => U8Parameters::Monophonic,
+    "Pan" => U8Parameters::Pan,
+    "Volume" => U8Parameters::Volume,
+    "MasterVolume" => U8Parameters::MasterVolume,
+    "Transpose" => U8Parameters::Transpose,
+    "Bend" => U8Parameters::Bend,
+    "BendRange" => U8Parameters::BendRange,
+    "Priority" => U8Parameters::Priority,
+    "Polyphony" => U8Parameters::Polyphony,
+    "Tie" => U8Parameters::Tie,
+    "PortamentoCnt" => U8Parameters::PortamentoCnt,
+    "ModDepth" => U8Parameters::ModDepth,
+    "ModSpeed" => U8Parameters::ModSpeed,
+    "ModType" => U8Parameters::ModType,
+    "ModRange" => U8Parameters::ModRange,
+    "Portamento" => U8Parameters::Portamento,
+    "PortamentoTime" => U8Parameters::PortamentoTime,
+    "Attack" => U8Parameters::Attack,
+    "Decay" => U8Parameters::Decay,
+    "Sustain" => U8Parameters::Sustain,
+    "Release" => U8Parameters::Release,
+    "Expression" => U8Parameters::Expression,
+    "Span" => U8Parameters::Span,
+    "Cutoff" => U8Parameters::Cutoff,
+    "FxSendA" => U8Parameters::FxSendA,
+    "FxSendB" => U8Parameters::FxSendB,
+    "MainSend" => U8Parameters::MainSend,
+    "InitPan" => U8Parameters::InitPan,
+    "Mute" => U8Parameters::Mute,
+    "FxSendC" => U8Parameters::FxSendC,
+    "Damper" => U8Parameters::Damper
+};
+
+U16Param: U16Parameters = {
+    "ModDelay" => U16Parameters::ModDelay,
+    "Tempo" => U16Parameters::Tempo,
+    "Sweep" => U16Parameters::Sweep,
+    "TrackUsage" => U16Parameters::TrackUsage,
+};
+
+// Fake declarations for use with Num<T> and SetMacro
+u8: u8 = Num<u8>;
+VarInt: VarInt = Num<VarInt>;
+i16: i16 = Num<i16>;
+u16: u16 = Num<u16>;
+
+match {
+    r"\s*" => { }, // whitespace skipping
+    r"#[^\n\r]*[\n\r]*" => { }, // '#' comment skipping
+    _
+}

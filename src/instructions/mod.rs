@@ -1,11 +1,9 @@
 use num_traits::{FromPrimitive, ToPrimitive};
 use num_derive::{FromPrimitive, ToPrimitive};
+use std::fmt;
 
-mod parser;
-mod gen;
-
-pub use parser::parse_instructions as parse;
-pub use gen::gen_instructions as gen;
+pub mod bin;
+pub mod asm;
 
 type VarInt = u64;
 
@@ -70,7 +68,7 @@ impl Instruction {
 pub enum Destination {
     Label(String),
     // TODO: phase this out.
-    Address(u32)
+    //Address(u32)
 }
 
 impl Destination {
@@ -81,12 +79,12 @@ impl Destination {
         }
     }
 
-    fn is_addr(&self) -> bool {
-        match self {
-            Destination::Address(_) => true,
-            _ => false
-        }
-    }
+    // fn is_addr(&self) -> bool {
+    //     match self {
+    //         Destination::Address(_) => true,
+    //         _ => false
+    //     }
+    // }
 }
 
 #[derive(Debug, FromPrimitive, ToPrimitive, Copy, Clone)]
