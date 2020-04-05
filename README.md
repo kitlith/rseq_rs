@@ -28,3 +28,8 @@ to replace other songs before the assembler was created/finished.
 This is essentially a reimplementation of rseq2midi using the same parsing code
 as the rest of these programs. YMMV, but last I checked it handled call and jump better
 than rseq2midi.
+
+
+# Credits
+Atlas, for the BRSEQ documentation that was immensely useful for implementing this (https://pastebin.com/xgsKecv9)
+Ruben Nunez and Valley Bell, for making rseq2midi which `play` is based on and was also used as a form of documentation
