@@ -1,18 +1,19 @@
 use crate::instructions::{OptionalInst, Instruction, U8Parameters, U16Parameters, UserOp, Destination, VarInt};
+use crate::container::RSEQ;
 use num_traits::Num;
 
 grammar;
 
 Num<T>: T = {
-    r"0x([0-9a-fA-F]+)" => <_>::from_str_radix(<>, 16).unwrap(),
-    r"0o([0-8]+)" => <_>::from_str_radix(<>, 8).unwrap(),
-    r"0b([01]+)" => <_>::from_str_radix(<>, 2).unwrap(),
+    r"0x[0-9a-fA-F]+" => <_>::from_str_radix(&<>[2..], 16).unwrap(),
+    r"0o[0-8]+" => <_>::from_str_radix(&<>[2..], 8).unwrap(),
+    r"0b[01]+" => <_>::from_str_radix(&<>[2..], 2).unwrap(),
     r"-?[0-9]+" => <_>::from_str_radix(<>, 10).unwrap()
 };
 
-Label: String = r"[a-zA-Z_][a-zA-Z0-9_\-]+" => <>.into();
+Label: String = r"[a-zA-Z][a-zA-Z0-9_\-]+" => <>.into();
 
-Var: u8 = "v([0-9]+)" => u8::from_str_radix(<>, 10).unwrap();
+Var: u8 = r"_([0-9]+)" => u8::from_str_radix(&<>[1..], 10).unwrap();
 
 pub Inst: OptionalInst = {
     Op => OptionalInst::Instruction(<>),
@@ -20,6 +21,8 @@ pub Inst: OptionalInst = {
     <Label> ":" => OptionalInst::Label(<>),
     "?" => OptionalInst::Instruction(Instruction::If)
 }
+
+pub File: RSEQ = Inst* => RSEQ { instructions: <> };
 
 Op: Instruction = {
     "note" <note:u8> "," <velocity:u8> "," <len:VarInt> => Instruction::Note { <> },
@@ -66,6 +69,7 @@ ProcessInner: Instruction = {
 SetInner: Instruction = {
     <param:U8Param> "=" <value:u8> => Instruction::SetU8Param { <> },
     <param:U16Param> "=" <value:u16> => Instruction::SetU16Param { <> },
+    "Instrument" "=" <value:VarInt> => Instruction::Instrument(value)
 };
 
 U8Param: U8Parameters = {
@@ -115,7 +119,7 @@ U16Param: U16Parameters = {
 u8: u8 = Num<u8>;
 VarInt: VarInt = Num<VarInt>;
 i16: i16 = Num<i16>;
-u16: u16 = Num<u16>;
+pub u16: u16 = Num<u16>;
 
 match {
     r"\s*" => { }, // whitespace skipping

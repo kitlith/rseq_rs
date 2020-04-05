@@ -6,13 +6,13 @@ use std::io::Write;
 use std::collections::HashMap;
 use std::iter::IntoIterator;
 use nom::number::Endianness;
-use cookie_factory::{SerializeFn, BackToTheBuffer, Skip, Seek, WriteContext, GenError};
+use cookie_factory::{SerializeFn, BackToTheBuffer, Seek, WriteContext, GenError};
 use cookie_factory::combinator::{slice, back_to_the_buffer, string};
 use cookie_factory::sequence::{tuple, pair};
 use cookie_factory::multi::many_ref;
 use cookie_factory::bytes::be_u8;
 
-fn gen_section<W: Write + BackToTheBuffer + Skip, F: SerializeFn<W>>(name: [u8; 4], endian: Endianness, func: F) -> impl SerializeFn<W> {
+fn gen_section<W: Write + BackToTheBuffer, F: SerializeFn<W>>(name: [u8; 4], endian: Endianness, func: F) -> impl SerializeFn<W> {
     pair(
         slice(name), // section name
         back_to_the_buffer(4, // section length
@@ -22,7 +22,7 @@ fn gen_section<W: Write + BackToTheBuffer + Skip, F: SerializeFn<W>>(name: [u8; 
     )
 }
 
-fn gen_data_section<'a, W: Write + BackToTheBuffer + Skip + Seek>(instructions: &'a Vec<OptionalInst>, endian: Endianness) -> impl Fn(WriteContext<W>) -> Result<(WriteContext<W>, Vec<(u32, String)>), GenError> + 'a {
+fn gen_data_section<'a, W: Write + BackToTheBuffer + Seek>(instructions: &'a Vec<OptionalInst>, endian: Endianness) -> impl Fn(WriteContext<W>) -> Result<(WriteContext<W>, Vec<(u32, String)>), GenError> + 'a {
     move |ctx| {
         // Workaround: cookie_factory wants Fn, not FnMut.
         let labels = std::sync::Mutex::new(None);
@@ -41,7 +41,7 @@ fn gen_data_section<'a, W: Write + BackToTheBuffer + Skip + Seek>(instructions: 
 
 }
 
-fn gen_labl_section<W: Write + BackToTheBuffer + Skip>(labels: Vec<(u32, String)>, endian: Endianness) -> impl SerializeFn<W> {
+fn gen_labl_section<W: Write + BackToTheBuffer>(labels: Vec<(u32, String)>, endian: Endianness) -> impl SerializeFn<W> {
     let len = labels.len();
     gen_section(*b"LABL", endian,
         tuple((
@@ -74,7 +74,7 @@ fn gen_labl_section<W: Write + BackToTheBuffer + Skip>(labels: Vec<(u32, String)
     )
 }
 
-pub fn gen_rseq<'a, W: Write + BackToTheBuffer + Skip + Seek + 'a>(rseq: &'a RSEQ<'a>, endian: Endianness) -> impl SerializeFn<W> + 'a {
+pub fn gen_rseq<'a, W: Write + BackToTheBuffer + Seek + 'a>(rseq: &'a RSEQ, endian: Endianness) -> impl SerializeFn<W> + 'a {
     tuple((
         slice(&b"RSEQ"),
         bom(endian),

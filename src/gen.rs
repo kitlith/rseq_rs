@@ -80,10 +80,11 @@ pub fn gen_placeholder<W: Write + Seek>(reserved: usize) -> impl Fn(WriteContext
     }
 }
 
-pub fn gen_align<W: Write + Skip>(amount: u64) -> impl SerializeFn<W> {
+pub fn gen_align<W: Write>(amount: u64) -> impl SerializeFn<W> {
     // assuming power of 2
     move |ctx: WriteContext<W>| {
         let padding = amount as usize - (ctx.position % amount) as usize;
-        skip(if padding as u64 == amount { 0 } else { padding })(ctx)
+        let padding = if padding as u64 == amount { 0 } else { padding };
+        slice(vec![0; padding])(ctx)
     }
 }

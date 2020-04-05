@@ -33,13 +33,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                     OptionalInst::Instruction(i) => match i {
                         Instruction::Note { note, velocity, len } => writeln!(output, "note {}, {}, {}", note, velocity, len),
                         Instruction::Rest(len) => writeln!(output, "rest {}", len),
-                        Instruction::Instrument(value) => writeln!(output, "set Instrument {}", value),
+                        Instruction::Instrument(value) => writeln!(output, "set Instrument = {}", value),
                         Instruction::Fork { track, dest: Destination::Label(l) } => writeln!(output, "fork {}, {}", track, l),
                         Instruction::Jump(Destination::Label(l)) => writeln!(output, "jump {}", l),
                         Instruction::Call(Destination::Label(l)) => writeln!(output, "call {}", l),
                         Instruction::If => write!(output, "?"),
                         Instruction::LoopStart(unk) => writeln!(output, "start_loop {}", unk),
-                        Instruction::PrintVar(var) => writeln!(output, "print v{}", var),
+                        Instruction::PrintVar(var) => writeln!(output, "print _{}", var),
                         Instruction::UserProcess { op, var, imm } => {
                             let op_str = match op {
                                 UserOp::Set => "=",
@@ -64,7 +64,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                             };
                             match op {
                                 UserOp::User => writeln!(output, "process 0x{:x}", imm as u16),
-                                _ => writeln!(output, "process v{} {} {}", var, op_str, imm)
+                                _ => writeln!(output, "process _{} {} {}", var, op_str, imm)
                             }
                         },
                         Instruction::LoopEnd => writeln!(output, "end_loop"),

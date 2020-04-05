@@ -54,7 +54,7 @@ fn parse_data_section<'a, E: ParseError<&'a [u8]>>(input: &'a [u8], endian: Endi
     instructions::bin::parse_instructions(input, endian, labels)
 }
 
-pub fn parse<'a, E: ParseError<&'a [u8]>>(orig_input: &'a [u8]) -> IResult<&'a [u8], RSEQ<'a>, E> {
+pub fn parse<'a, E: ParseError<&'a [u8]>>(orig_input: &'a [u8]) -> IResult<&'a [u8], RSEQ, E> {
     let section_header = |endian| move |input| pair(pu32(endian), pu32(endian))(input);
 
     let input = orig_input;
@@ -73,5 +73,5 @@ pub fn parse<'a, E: ParseError<&'a [u8]>>(orig_input: &'a [u8]) -> IResult<&'a [
     let (_, labels) = parse_labl_section(labl, endian)?;
     let (_, instructions) = parse_data_section(data, endian, &labels)?;
 
-    Ok((&[][..], RSEQ { data, instructions, labels }))
+    Ok((&[][..], RSEQ { instructions }))
 }
