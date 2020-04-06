@@ -18,7 +18,7 @@ struct Options {
     #[structopt(parse(from_os_str))]
     input: PathBuf,
     #[structopt(parse(from_os_str))]
-    output: PathBuf
+    output: Option<PathBuf>
 }
 
 struct Track<'a> {
@@ -71,8 +71,8 @@ impl<'a> Track<'a> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let options = Options::from_args();
-    let bytes: Result<Vec<u8>, _> = File::open(options.input)?.bytes().collect();
+    let Options { input, output } = Options::from_args();
+    let bytes: Result<Vec<u8>, _> = File::open(&input)?.bytes().collect();
     let bytes = bytes?;
 
     let rseq = match cut(container::parse::<nom::error::VerboseError<&[u8]>>)(&bytes) {
@@ -217,7 +217,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     },
 
                     Instruction::SetU16Param { param, value } => match param {
-                        U16Parameters::Tempo => track.push_event(MidiKind::Meta(MetaMessage::Tempo( (60 * 1000000 / value as u32).into() ))),
+                        U16Parameters::Tempo => track.push_event(MidiKind::Meta(MetaMessage::Tempo( (60 * 1000000 * 2 / value as u32).into() ))),
                         _ => println!("Unimplemented param {:?} = {}", param, value)
                     }
 
@@ -237,7 +237,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         midi.tracks.push(track.messages);
     }
 
-    midi.save(options.output)?;
+    midi.save(output.unwrap_or_else(|| input.with_extension("midi")))?;
 
     Ok(())
 }

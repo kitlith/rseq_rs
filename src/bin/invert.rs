@@ -14,12 +14,12 @@ struct Options {
     #[structopt(parse(from_os_str))]
     input: PathBuf,
     #[structopt(parse(from_os_str))]
-    output: PathBuf
+    output: Option<PathBuf>
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let options = Options::from_args();
-    let bytes: Result<Vec<u8>, _> = File::open(options.input)?.bytes().collect();
+    let Options { input, output } = Options::from_args();
+    let bytes: Result<Vec<u8>, _> = File::open(&input)?.bytes().collect();
     let bytes = bytes?;
 
     let (_, mut rseq) = cut(container::parse::<nom::error::VerboseError<&[u8]>>)(&bytes).unwrap();
@@ -33,6 +33,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut new_bytes = vec![0; bytes.len()];
     gen(container::gen(&rseq, Endianness::Big), Cursor::new(new_bytes.as_mut_slice()))?;
 
-    File::create(options.output)?.write_all(&new_bytes)?;
+    let output = output.unwrap_or_else(|| {
+        let mut new_name = input.file_stem().unwrap().to_owned();
+        new_name.push("_inverted.brseq");
+        input.with_file_name(new_name)
+    });
+
+    File::create(output)?.write_all(&new_bytes)?;
     Ok(())
 }

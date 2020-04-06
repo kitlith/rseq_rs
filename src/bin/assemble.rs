@@ -9,12 +9,12 @@ use nom::number::Endianness;
 use cookie_factory::gen;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "rseq-invert")]
+#[structopt(name = "rseq-assemble")]
 struct Options {
     #[structopt(parse(from_os_str))]
     input: PathBuf,
     #[structopt(parse(from_os_str))]
-    output: PathBuf
+    output: Option<PathBuf>
 }
 
 struct FileWrapper(File);
@@ -38,12 +38,14 @@ impl Seek for FileWrapper {
 impl cookie_factory::Seek for FileWrapper {}
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let options = Options::from_args();
+    let Options { input, output } = Options::from_args();
     let mut asm = String::new();
-    File::open(options.input)?.read_to_string(&mut asm)?;
+    File::open(&input)?.read_to_string(&mut asm)?;
     let rseq = AsmParser::new().parse(&asm).unwrap();
 
-    let output = File::create(options.output)?;
+    let output = File::create(
+        output.unwrap_or_else(|| input.with_extension("brseq"))
+    )?;
     gen(container::gen(&rseq, Endianness::Big), FileWrapper(output))?;
     Ok(())
 }

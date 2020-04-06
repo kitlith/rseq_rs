@@ -14,18 +14,18 @@ struct Options {
     #[structopt(parse(from_os_str))]
     input: PathBuf,
     #[structopt(parse(from_os_str))]
-    output: PathBuf
+    output: Option<PathBuf>
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let options = Options::from_args();
-    let bytes: Result<Vec<u8>, _> = File::open(options.input)?.bytes().collect();
+    let Options { input, output } = Options::from_args();
+    let bytes: Result<Vec<u8>, _> = File::open(&input)?.bytes().collect();
     let bytes = bytes?;
 
     match cut(container::parse::<nom::error::VerboseError<&[u8]>>)(&bytes) {
         Ok((_, rseq)) => {
             // println!("{:?}", rseq.labels);
-            let mut output = File::create(options.output)?;
+            let mut output = File::create(output.unwrap_or_else(|| input.with_extension("txt")))?;
             for inst in rseq.instructions {
                 match inst {
                     OptionalInst::Label(l) => writeln!(output, "{}:", l),
