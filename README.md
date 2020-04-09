@@ -3,6 +3,9 @@
 TBH I still expect some breakage from the current code, so make sure to make a
 GitHub issue on crashes or things not working as expected.
 
+I'm also putting more work into [GotaSequenceCmd](https://github.com/kitlith/GotaSequenceCmd)
+now, so you may want to use that instead of this.
+
 # Usage
 
 ## Disassemble
@@ -31,5 +34,7 @@ than rseq2midi.
 
 
 # Credits
-Atlas, for the BRSEQ documentation that was immensely useful for implementing this (https://pastebin.com/xgsKecv9)
-Ruben Nunez and Valley Bell, for making rseq2midi which `play` is based on and was also used as a form of documentation
+Atlas, for the BRSEQ documentation that was immensely useful for implementing this (https://pastebin.com/xgsKecv9) 
+Ruben Nunez and Valley Bell, for making rseq2midi which `play` is based on and was also used as a form of documentation 
+Adam Crossing, for making videos about Wii Music and inspiring me to look into this 
+
