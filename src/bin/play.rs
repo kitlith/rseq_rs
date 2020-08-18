@@ -100,7 +100,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }).collect();
 
     // TODO: handle timebase properly
-    let header = midly::Header::new(midly::Format::Parallel, midly::Timing::Metrical(96.into()));
+    let header = midly::Header::new(midly::Format::Parallel, midly::Timing::Metrical(48.into()));
     let mut midi: Smf = Smf::new(header, Vec::new()).unwrap();
 
     let mut tracks = vec![Track::new(0, 0, 0)];
@@ -218,7 +218,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     },
 
                     Instruction::SetU16Param { param, value } => match param {
-                        U16Parameters::Tempo => track.push_event(MidiKind::Meta(MetaMessage::Tempo( (60 * 1000000 * 2 / value as u32).into() ))),
+                        U16Parameters::Tempo => track.push_event(MidiKind::Meta(MetaMessage::Tempo( (60 * 1000000 / value as u32).into() ))),
                         _ => println!("Unimplemented param {:?} = {}", param, value)
                     }
 
