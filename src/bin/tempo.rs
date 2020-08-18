@@ -30,12 +30,14 @@ struct TempoConvert {
 }
 
 impl TempoConvert {
-    fn stretch(&mut self, value: u64) -> u64 {
+    fn stretch(&mut self, value: u64, change_error: bool) -> u64 {
         if self.error > 2.0 {
             eprintln!("Warning: error has gone above 2 ticks.");
         }
         let ticks = (value as f64 * self.target / self.current.unwrap() as f64) + self.error;
-        self.error = ticks.fract();
+        if change_error {
+            self.error = ticks.fract();
+        }
         ticks.trunc() as u64
     }
 
@@ -64,8 +66,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                     convert.set_tempo(*tempo);
                     *tempo = convert.target as u16;
                 },
-                Instruction::Note { ref mut len, .. } => *len = convert.stretch(*len),
-                Instruction::Rest(ref mut len) => *len = convert.stretch(*len),
+                Instruction::Note { ref mut len, .. } => *len = convert.stretch(*len, false),
+                Instruction::Rest(ref mut len) => *len = convert.stretch(*len, true),
                 _ => ()
             },
             _ => ()
