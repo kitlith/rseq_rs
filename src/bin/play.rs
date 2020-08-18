@@ -13,12 +13,14 @@ use midly::{Smf, MidiMessage, MetaMessage, Event as MidiEvent, EventKind as Midi
 
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "rseq-disassembler")]
+#[structopt(name = "rseq-play")]
 struct Options {
     #[structopt(parse(from_os_str))]
     input: PathBuf,
     #[structopt(parse(from_os_str))]
-    output: Option<PathBuf>
+    output: Option<PathBuf>,
+    #[structopt(short = "t", long = "timebase", default_value = "48")]
+    timebase: u16
 }
 
 struct Track<'a> {
@@ -71,7 +73,7 @@ impl<'a> Track<'a> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let Options { input, output } = Options::from_args();
+    let Options { input, output, timebase } = Options::from_args();
     let bytes: Result<Vec<u8>, _> = File::open(&input)?.bytes().collect();
     let bytes = bytes?;
 
@@ -100,7 +102,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }).collect();
 
     // TODO: handle timebase properly
-    let header = midly::Header::new(midly::Format::Parallel, midly::Timing::Metrical(48.into()));
+    let header = midly::Header::new(midly::Format::Parallel, midly::Timing::Metrical(timebase.into()));
     let mut midi: Smf = Smf::new(header, Vec::new()).unwrap();
 
     let mut tracks = vec![Track::new(0, 0, 0)];
