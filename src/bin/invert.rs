@@ -30,15 +30,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    let mut new_bytes = vec![0; bytes.len()];
-    gen(container::gen(&rseq, Endianness::Big), Cursor::new(new_bytes.as_mut_slice()))?;
-
     let output = output.unwrap_or_else(|| {
         let mut new_name = input.file_stem().unwrap().to_owned();
         new_name.push("_inverted.brseq");
         input.with_file_name(new_name)
     });
 
-    File::create(output)?.write_all(&new_bytes)?;
+    let mut file = File::create(output)?;
+
+    gen(container::gen(&rseq, Endianness::Big), CookieFile(&mut file))?;
     Ok(())
 }

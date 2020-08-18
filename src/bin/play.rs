@@ -99,6 +99,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }).collect();
 
+    // TODO: handle timebase properly
     let header = midly::Header::new(midly::Format::Parallel, midly::Timing::Metrical(96.into()));
     let mut midi: Smf = Smf::new(header, Vec::new()).unwrap();
 
@@ -184,7 +185,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                             } else {
                                 *var <<= imm;
                             },
-                            // Chosen by dair dice roll. guaranteed to be random.
+                            // Chosen by fair dice roll. guaranteed to be random.
                             // TODO: Jokes aside, actually implement this.
                             UserOp::Rand => *var = 4,
                             UserOp::And => *var &= imm,

@@ -1,4 +1,4 @@
-use rseq_rs::{container, instructions::{OptionalInst, Instruction, asm::AsmParser}};
+use rseq_rs::{container, instructions::{OptionalInst, Instruction, asm::AsmParser}, CookieFile};
 use structopt::StructOpt;
 use std::path::PathBuf;
 use std::fs::File;
@@ -17,26 +17,6 @@ struct Options {
     output: Option<PathBuf>
 }
 
-struct FileWrapper(File);
-
-impl Write for FileWrapper {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.0.write(buf)
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.0.flush()
-    }
-}
-
-impl Seek for FileWrapper {
-    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        self.0.seek(pos)
-    }
-}
-
-impl cookie_factory::Seek for FileWrapper {}
-
 fn main() -> Result<(), Box<dyn Error>> {
     let Options { input, output } = Options::from_args();
     let mut asm = String::new();
@@ -46,6 +26,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let output = File::create(
         output.unwrap_or_else(|| input.with_extension("brseq"))
     )?;
-    gen(container::gen(&rseq, Endianness::Big), FileWrapper(output))?;
+    gen(container::gen(&rseq, Endianness::Big), CookieFile(&mut output))?;
     Ok(())
 }
