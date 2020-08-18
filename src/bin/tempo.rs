@@ -23,6 +23,30 @@ fn tempo_stretch(source: u16, target: f64, value: u64) -> u64 {
     (value as u128 * target as u128 / source as u128) as u64
 }
 
+struct TempoConvert {
+    target: f64,
+    current: Option<u16>,
+    error: f64
+}
+
+impl TempoConvert {
+    fn stretch(&mut self, value: u64) -> u64 {
+        if self.error > 2.0 {
+            eprintln!("Warning: error has gone above 2 ticks.");
+        }
+        let ticks = (value as f64 * self.target / self.current.unwrap() as f64) + self.error;
+        self.error = ticks.fract();
+        ticks.trunc() as u64
+    }
+
+    fn set_tempo(&mut self, value: u16) -> Option<u16> {
+        // TODO: convert error to the new tempo if needed?
+        let old_current = self.current;
+        self.current = Some(value);
+        old_current
+    }
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let Options { input, output, target } = Options::from_args();
     let bytes: Result<Vec<u8>, _> = File::open(&input)?.bytes().collect();
@@ -30,18 +54,18 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let (_, mut rseq) = cut(container::parse::<nom::error::VerboseError<&[u8]>>)(&bytes).unwrap();
 
-    let mut current = None;
+    let mut convert = TempoConvert { target, current: None, error: 0.0 };
 
     // TODO: fancy bpm changes might make this incorrect, should really go down each track in turn instead of just a single list of instructions
     for instruction in &mut rseq.instructions {
         match instruction {
             OptionalInst::Instruction(ref mut inst) => match inst {
                 Instruction::SetU16Param { param: U16Parameters::Tempo, value: ref mut tempo } => {
-                    current = Some(*tempo);
-                    *tempo = target as u16;
+                    convert.set_tempo(*tempo);
+                    *tempo = convert.target as u16;
                 },
-                Instruction::Note { ref mut len, .. } => *len = tempo_stretch(current.unwrap(), target, *len),
-                Instruction::Rest(ref mut len) => *len = tempo_stretch(current.unwrap(), target, *len),
+                Instruction::Note { ref mut len, .. } => *len = convert.stretch(*len),
+                Instruction::Rest(ref mut len) => *len = convert.stretch(*len),
                 _ => ()
             },
             _ => ()
