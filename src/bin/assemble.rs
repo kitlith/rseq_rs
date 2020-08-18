@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     File::open(&input)?.read_to_string(&mut asm)?;
     let rseq = AsmParser::new().parse(&asm).unwrap();
 
-    let output = File::create(
+    let mut output = File::create(
         output.unwrap_or_else(|| input.with_extension("brseq"))
     )?;
     gen(container::gen(&rseq, Endianness::Big), CookieFile(&mut output))?;

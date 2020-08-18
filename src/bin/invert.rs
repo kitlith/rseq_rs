@@ -1,4 +1,4 @@
-use rseq_rs::{container, instructions::{OptionalInst, Instruction}};
+use rseq_rs::{container, instructions::{OptionalInst, Instruction}, CookieFile};
 use structopt::StructOpt;
 use std::path::PathBuf;
 use std::fs::File;
