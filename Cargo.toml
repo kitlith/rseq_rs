@@ -17,6 +17,8 @@ cookie-factory = "0.3"
 midly = "0.4"
 lalrpop-util = "0.18.1"
 regex = "1"
+lazy_static = "1.4.0"
+arrayvec = "0.5.1"
 
 [dependencies.nom]
 version = "5.1"
